@@ -280,13 +280,23 @@
 
   <script>
     const LANG_EMOJIS = {
-      "🇬🇧": "English", "🇫🇷": "French", "🇸🇦": "Arabic",
+      "🇬🇧": "British English", "🇫🇷": "French", "🇸🇦": "Arabic",
       "🇯🇵": "Japanese", "🇮🇹": "Italian", "🇩🇪": "German",
-      "🇪🇸": "Spanish", "🇷🇺": "Russian", "🇲🇦": "Maghrebi dialect",
+      "🇪🇸": "Spanish", "🇷🇺": "Russian", "🇩🇿": "Maghrebi dialect",
       "🇵🇹": "Portuguese", "🇳🇱": "Dutch", "🇰🇷": "Korean",
       "🇨🇳": "Chinese", "🇷🇴": "Romanian", "🇵🇱": "Polish",
       "🇨🇿": "Czech", "🇧🇬": "Bulgarian", "🇭🇺": "Hungarian",
       "🇭🇷": "Croatian", "🇻🇳": "Vietnamese", "🇹🇭": "Thai",
+      "🇱🇾": "Libyan Arabic", "🇹🇷": "Turkish", "🇺🇦": "Ukrainian",
+      "🇮🇩": "Indonesian", "🇸🇪": "Swedish", "🇳🇴": "Norwegian",
+      "🇩🇰": "Danish", "🇮🇸": "Icelandic", "🇫🇮": "Finnish",
+      "🇬🇱": "Kalaallisut", "🇬🇷": "Greek", "🇮🇷": "Persian",
+      "🇵🇸": "Hebrew", "🇲🇦": "Amazigh", "🇮🇳": "Hindi",
+      "🇵🇰": "Urdu", "🇷🇸": "Serbian", "🇲🇾": "Malay",
+      "🇵🇭": "Tagalog", "🇨🇦": "Quebec French", "🇲🇽": "Mexican Spanish",
+      "🇧🇷": "Brazilian Portuguese", "🇦🇺": "Australian English", "🇮🇪": "Irish",
+      "🇺🇸": "American English", "🇪🇬": "Egyptian Arabic", "🇱🇧": "Lebanese Arabic",
+      "🇸🇩": "Sudanese Arabic", "🇮🇶": "Iraqi Arabic",
     };
     const LANG_TO_EMOJI = Object.fromEntries(Object.entries(LANG_EMOJIS).map(([k,v])=>[v,k]));
     const SUPPORTED = Object.values(LANG_EMOJIS).join(", ");
