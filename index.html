@@ -345,7 +345,7 @@
     async function callGemini(text, targetLang, mode) {
       const apiKeyEl = document.getElementById("api-key");
       const apiKey = apiKeyEl ? apiKeyEl.value.trim() : "";
-      if (!apiKey) throw new Error("Please, Provide your GEMINI API KEY");
+      if (!apiKey) throw new Error("Please, Provide your GIMINI API KEY");
 
       let prompt;
       if (mode === "translate" && targetLang) {
@@ -425,7 +425,7 @@
       const btn = document.getElementById("go-btn");
       if (!btn) return;
       btn.disabled = on;
-      btn.innerHTML = on ? '<span class="loader"></span>Processing...' : "GO !";
+      btn.innerHTML = on ? '<span class="loader"></span>⏳ Processing . . .' : "GO !";
     }
 
     async function handleGo() {
