@@ -155,14 +155,17 @@
       min-height: 1.2em;
     }
 
-    /* ── Go button ── */
-    .go-area { padding: 0 24px 24px; }
-    #go-btn {
-      width: 100%;
+    /* ── Action Buttons (Côte à côte) ── */
+    .action-area {
+      padding: 0 24px 24px;
+      display: flex;
+      gap: 12px;
+    }
+    .action-btn {
+      flex: 1;
       padding: 14px;
       border-radius: 12px;
       border: none;
-      background: linear-gradient(135deg, #a78bfa, #60a5fa);
       color: #fff;
       font-size: 0.95rem;
       font-weight: 600;
@@ -170,13 +173,15 @@
       transition: all 0.15s;
       letter-spacing: 0.02em;
       font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
-    #go-btn:disabled {
-      background: #2a2a35;
-      color: #4a4a55;
-      cursor: not-allowed;
-    }
-    #go-btn:not(:disabled):hover { opacity: 0.9; transform: translateY(-1px); }
+    .action-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    
+    #confirm-btn { background: #16a34a; } /* Vert */
+    #cancel-btn { background: #dc2626; }  /* Rouge */
 
     /* ── Output ── */
     #output-section { display: none; }
@@ -199,18 +204,21 @@
       line-height: 1.7;
       margin-top: 12px;
     }
-    .error-msg { color: #f87171; font-size: 0.9rem; }
+    .error-msg { 
+      color: #f87171; 
+      font-size: 1.05rem; 
+      line-height: 1.6;
+      white-space: pre-line; /* Permet de conserver les sauts de ligne (\n) */
+    }
 
     /* ── Loader ── */
     .loader {
       display: inline-block;
       width: 18px; height: 18px;
-      border: 2px solid #3a3a48;
-      border-top-color: #a78bfa;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
-      vertical-align: middle;
-      margin-right: 8px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -233,7 +241,7 @@
 
     <!-- Text input -->
     <div class="input-area">
-      <textarea id="text-input" rows="4" placeholder="Enter a Message"></textarea>
+      <textarea id="text-input" rows="4" placeholder="Provide a Message"></textarea>
     </div>
 
     <div class="divider"></div>
@@ -250,9 +258,10 @@
       <div id="selected-lang-label"></div>
     </div>
 
-    <!-- Go -->
-    <div class="go-area">
-      <button id="go-btn" disabled onclick="handleGo()">GO !</button>
+    <!-- Action Buttons -->
+    <div class="action-area">
+      <button id="confirm-btn" class="action-btn" onclick="handleConfirm()">✅ Confirm</button>
+      <button id="cancel-btn" class="action-btn" onclick="handleCancel()">❌ Cancel</button>
     </div>
 
     <!-- Output -->
@@ -302,11 +311,6 @@
           grid.appendChild(btn);
         });
       }
-      
-      const inputEl = document.getElementById("text-input");
-      if (inputEl) {
-        inputEl.addEventListener("input", updateGoBtn);
-      }
     });
 
     function selectLang(emoji) {
@@ -322,31 +326,15 @@
       if (label) {
         label.textContent = selectedLang ? `→ ${LANG_EMOJIS[selectedLang]}` : "";
       }
-      updateGoBtn();
     }
 
     function toggleBT() {
       backThought = !backThought;
       const btn = document.getElementById("bt-btn");
       if (btn) btn.classList.toggle("active", backThought);
-      updateGoBtn();
     }
 
-    function updateGoBtn() {
-      const inputEl = document.getElementById("text-input");
-      const goBtn = document.getElementById("go-btn");
-      if (!inputEl || !goBtn) return;
-      
-      const text = inputEl.value.trim();
-      const active = text && (selectedLang || backThought);
-      goBtn.disabled = !active;
-    }
-
-    async function callGemini(text, targetLang, mode) {
-      const apiKeyEl = document.getElementById("api-key");
-      const apiKey = apiKeyEl ? apiKeyEl.value.trim() : "";
-      if (!apiKey) throw new Error("Please, Provide your GIMINI API KEY");
-
+    async function callGemini(text, targetLang, mode, apiKey) {
       let prompt;
       if (mode === "translate" && targetLang) {
         prompt =
@@ -421,34 +409,67 @@
       }
     }
 
-    function setLoading(on) {
-      const btn = document.getElementById("go-btn");
-      if (!btn) return;
-      btn.disabled = on;
-      btn.innerHTML = on ? '<span class="loader"></span>⏳ Processing . . .' : "GO !";
+    function setButtonsState(loading) {
+      const cBtn = document.getElementById("confirm-btn");
+      const xBtn = document.getElementById("cancel-btn");
+      if (!cBtn || !xBtn) return;
+
+      if (loading) {
+        cBtn.disabled = true;
+        xBtn.disabled = true;
+        cBtn.innerHTML = '<span class="loader"></span> ⏳ Processing . . .';
+      } else {
+        cBtn.disabled = false;
+        xBtn.disabled = false;
+        cBtn.innerHTML = '✅ Confirm';
+      }
     }
 
-    async function handleGo() {
-      const inputEl = document.getElementById("text-input");
-      if (!inputEl) return;
-      const text = inputEl.value.trim();
-      if (!text) return;
+    function handleCancel() {
+      setOutput(`<p class="result-main">❌ Cancelled</p>`);
+    }
 
-      setLoading(true);
-      const section = document.getElementById("output-section");
-      if (section) section.classList.remove("visible");
+    async function handleConfirm() {
+      const apiKeyEl = document.getElementById("api-key");
+      const inputEl = document.getElementById("text-input");
+
+      const apiKey = apiKeyEl ? apiKeyEl.value.trim() : "";
+      const text = inputEl ? inputEl.value.trim() : "";
+      const hasAction = selectedLang || backThought;
+
+      // --- Système de Validation sur mesure ---
+      let missing = [];
+      if (!apiKey) missing.push("Provide your GEMINI API KEY");
+      if (!text) missing.push("Provide a Message");
+      if (!hasAction) missing.push("Transled or Reveal the Hidden Truth");
+
+      if (missing.length > 0) {
+        let errorMsg = "❌ Please,\n";
+        if (missing.length === 1) {
+          errorMsg += missing[0];
+        } else if (missing.length === 2) {
+          errorMsg += `${missing[0]},\nand ${missing[1]}`;
+        } else if (missing.length === 3) {
+          errorMsg += `${missing[0]},\n${missing[1]},\nand ${missing[2]}`;
+        }
+        setOutput(`<p class="error-msg">${errorMsg}</p>`);
+        return;
+      }
+
+      // --- Lancement de l'API si tout est OK ---
+      setButtonsState(true);
 
       try {
         const targetLang = selectedLang ? LANG_EMOJIS[selectedLang] : null;
 
         if (backThought && !selectedLang) {
-          const { sourceLang, result } = await callGemini(text, null, "truth");
+          const { sourceLang, result } = await callGemini(text, null, "truth", apiKey);
           if (!sourceLang) { setOutput(`<p class="error-msg">❌ Language Not Supported</p>`); return; }
           setOutput(`<p class="result-main">${result}</p>`);
         }
 
         else if (!backThought && selectedLang) {
-          const { sourceLang, result } = await callGemini(text, targetLang, "translate");
+          const { sourceLang, result } = await callGemini(text, targetLang, "translate", apiKey);
           if (!sourceLang) { setOutput(`<p class="error-msg">❌ Language Not Supported</p>`); return; }
           const emoji = LANG_TO_EMOJI[sourceLang] ?? "🏳️";
           if (sourceLang === targetLang) {
@@ -459,7 +480,7 @@
         }
 
         else if (backThought && selectedLang) {
-          const { sourceLang, result: truthText } = await callGemini(text, null, "truth");
+          const { sourceLang, result: truthText } = await callGemini(text, null, "truth", apiKey);
           if (!sourceLang) { setOutput(`<p class="error-msg">❌ Language Not Supported</p>`); return; }
           const emoji = LANG_TO_EMOJI[sourceLang] ?? "🏳️";
 
@@ -469,7 +490,7 @@
               `<p class="result-truth">${truthText}</p>`
             );
           } else {
-            const { result: translatedTruth } = await callGemini(truthText, targetLang, "translate");
+            const { result: translatedTruth } = await callGemini(truthText, targetLang, "translate", apiKey);
             setOutput(`<p class="result-main">${emoji} ${translatedTruth}</p>`);
           }
         }
@@ -477,8 +498,7 @@
       } catch (e) {
         setOutput(`<p class="error-msg">❌ ${e.message}</p>`);
       } finally {
-        setLoading(false);
-        updateGoBtn();
+        setButtonsState(false);
       }
     }
   </script>
