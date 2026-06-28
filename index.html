@@ -155,7 +155,7 @@
       min-height: 1.2em;
     }
 
-    /* ── Action Buttons (Côte à côte) ── */
+    /* ── Action Buttons ── */
     .action-area {
       padding: 0 24px 24px;
       display: flex;
@@ -180,8 +180,8 @@
     }
     .action-btn:hover { opacity: 0.9; transform: translateY(-1px); }
     
-    #confirm-btn { background: #16a34a; } /* Vert */
-    #cancel-btn { background: #dc2626; }  /* Rouge */
+    #confirm-btn { background: #16a34a; }
+    #cancel-btn { background: #dc2626; }
 
     /* ── Output ── */
     #output-section { display: none; }
@@ -208,7 +208,7 @@
       color: #f87171; 
       font-size: 1.05rem; 
       line-height: 1.6;
-      white-space: pre-line; /* Permet de conserver les sauts de ligne (\n) */
+      white-space: pre-line;
     }
 
     /* ── Loader ── */
@@ -426,7 +426,32 @@
     }
 
     function handleCancel() {
+      // 1. Affichage immédiat du message d'annulation
       setOutput(`<p class="result-main">❌ Cancelled</p>`);
+
+      // 2. Remise à zéro complète après 1.5 seconde
+      setTimeout(() => {
+        // Vide les champs de texte
+        const apiKeyEl = document.getElementById("api-key");
+        const inputEl = document.getElementById("text-input");
+        if (apiKeyEl) apiKeyEl.value = "";
+        if (inputEl) inputEl.value = "";
+
+        // Réinitialise la langue sélectionnée et son affichage graphique
+        selectedLang = null;
+        document.querySelectorAll(".lang-btn").forEach(b => b.classList.remove("selected"));
+        const label = document.getElementById("selected-lang-label");
+        if (label) label.textContent = "";
+
+        // Réinitialise le mode Back Thought
+        backThought = false;
+        const btBtn = document.getElementById("bt-btn");
+        if (btBtn) btBtn.classList.remove("active");
+
+        // Cache la section des résultats pour retrouver la page vide initiale
+        const section = document.getElementById("output-section");
+        if (section) section.classList.remove("visible");
+      }, 1500); 
     }
 
     async function handleConfirm() {
