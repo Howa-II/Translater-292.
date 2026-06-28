@@ -60,7 +60,6 @@
       color: #6b6b80;
       margin-bottom: 12px;
       letter-spacing: 0.05em;
-      text-transform: uppercase;
       font-weight: 600;
     }
 
@@ -82,7 +81,11 @@
     }
     #api-key:focus { border-color: #a78bfa; }
 
-    /* ── Bloc 2 : Message Input ── */
+    /* ── Bloc 2 : Message Input + Compteur ── */
+    .textarea-container {
+      display: flex;
+      flex-direction: column;
+    }
     textarea {
       width: 100%;
       background: transparent;
@@ -95,6 +98,45 @@
       font-family: inherit;
     }
     textarea::placeholder { color: #3a3a48; }
+    
+    .textarea-footer {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+    
+    .char-counter {
+      font-size: 0.75rem;
+      color: #4e4e61;
+      transition: color 0.15s;
+    }
+    .char-counter.limit-reached {
+      color: #f87171;
+      font-weight: bold;
+    }
+
+    /* Zone d'alerte sous la ligne dans le bloc */
+    .limit-warning-zone {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: all 0.2s ease-in-out;
+    }
+    .limit-warning-zone.visible {
+      max-height: 50px;
+      opacity: 1;
+      margin-top: 12px;
+    }
+    .limit-warning-line {
+      border: 0;
+      border-top: 1px solid #2a2a35;
+      margin-bottom: 10px;
+    }
+    .limit-warning-text {
+      color: #f87171;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
 
     /* ── Bloc 3 : Back Thought ── */
     #bt-btn {
@@ -238,7 +280,17 @@
     <!-- BLOC 2: Provide a Message -->
     <div class="block">
       <div class="block-title">Provide a Message</div>
-      <textarea id="text-input" rows="4" placeholder="292 . . ."></textarea>
+      <div class="textarea-container">
+        <textarea id="text-input" rows="4" placeholder="292 . . ." maxlength="292" oninput="updateCounter()"></textarea>
+        <div class="textarea-footer">
+          <div class="char-counter" id="char-counter">0 / 292</div>
+        </div>
+        <!-- Ligne et message d'erreur intégrés à l'intérieur du bloc -->
+        <div class="limit-warning-zone" id="limit-warning-zone">
+          <hr class="limit-warning-line" />
+          <div class="limit-warning-text">❌ It is Impossible to Enter More than 292 Characters</div>
+        </div>
+      </div>
     </div>
 
     <!-- BLOC 3: Back Thought -->
@@ -262,7 +314,7 @@
       </div>
     </div>
 
-    <!-- BLOC 6: OUTPUT & ERRORS (Masqué par défaut) -->
+    <!-- BLOC 6: OUTPUT & ERRORS -->
     <div class="block" id="output-block">
       <div class="block-title" id="output-title">Response</div>
       <div id="output-inner"></div>
@@ -310,6 +362,24 @@
         });
       }
     });
+
+    function updateCounter() {
+      const textarea = document.getElementById("text-input");
+      const counter = document.getElementById("char-counter");
+      const warningZone = document.getElementById("limit-warning-zone");
+      if (!textarea || !counter || !warningZone) return;
+
+      const currentLength = textarea.value.length;
+      counter.textContent = `${currentLength} / 292`;
+
+      if (currentLength >= 292) {
+        counter.classList.add("limit-reached");
+        warningZone.classList.add("visible");
+      } else {
+        counter.classList.remove("limit-reached");
+        warningZone.classList.remove("visible");
+      }
+    }
 
     function selectLang(emoji) {
       if (selectedLang === emoji) {
@@ -398,18 +468,18 @@
       return { sourceLang, result };
     }
 
+    // Gestion de l'affichage dynamique des titres (ERROR ou DONE)
     function setOutput(html, isError = false) {
       const block = document.getElementById("output-block");
       const title = document.getElementById("output-title");
       const inner = document.getElementById("output-inner");
       if (inner && block && title) {
-        title.textContent = isError ? "Error" : "Response";
+        title.textContent = isError ? "❌ ERROR" : "DONE ! ✅";
         inner.innerHTML = html;
         block.classList.add("visible");
       }
     }
 
-    font-style
     function hideOutput() {
       const block = document.getElementById("output-block");
       if (block) {
@@ -451,6 +521,7 @@
         const btBtn = document.getElementById("bt-btn");
         if (btBtn) btBtn.classList.remove("active");
 
+        updateCounter();
         hideOutput();
       }, 1200); 
     }
