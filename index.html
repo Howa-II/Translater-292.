@@ -621,4 +621,45 @@
             } else {
               const mainRowHTML = createRowHTML("result-main", emoji, result);
               const ipaRowHTML = createRowHTML("result-ipa", "🌐", ipa);
-              setOutput(mainRowH
+              setOutput(mainRowHTML + ipaRowHTML);
+            }
+          }
+        }
+
+        // CAS 3 : Back Thought + Traduction combinés
+        else if (backThought && selectedLang) {
+          const { sourceLang, result: truthText, ipa } = await callGemini(text, targetLang, "truth", apiKey);
+          if (!sourceLang) { setOutput(`<p class="error-msg">❌ Language Not Supported</p>`, true); return; }
+          
+          const emoji = LANG_TO_EMOJI[sourceLang] ?? "🏳️";
+
+          if (sourceLang === targetLang) {
+            setOutput(
+              `<p class="result-muted">${emoji} Already in ${sourceLang}.</p>` +
+              `<p class="result-truth">${truthText}</p>`
+            );
+          } else {
+            // Si l'IPA est manquant ou invalide, on affiche l'erreur "Please, Try Again"
+            if (!ipa || ipa.toUpperCase() === "N/A" || ipa.trim() === "") {
+              setOutput(`<p class="error-msg">⚠️ Please, Try Again</p>`, true);
+            } else {
+              const mainRowHTML = createRowHTML("result-main", emoji, truthText);
+              const ipaRowHTML = createRowHTML("result-ipa", "🌐", ipa);
+              setOutput(mainRowHTML + ipaRowHTML);
+            }
+          }
+        }
+
+      } catch (e) {
+        if (e.isGeminiCrash) {
+          setOutput(`<p class="error-msg">⚠️ Please, Try Again</p>`, true);
+        } else {
+          setOutput(`<p class="error-msg">❌ ${e.message}</p>`, true);
+        }
+      } finally {
+        setButtonsState(false);
+      }
+    }
+  </script>
+</body>
+</html>
