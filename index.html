@@ -229,7 +229,7 @@
     .result-row {
       display: flex;
       flex-direction: row; 
-      align-items: center; /* ALIGNEMENT PARFAIT : Centre verticalement l'émoji et l'écriture quand ils sont côte à côte */
+      align-items: center; 
       gap: 8px;
       line-height: 1.7;
     }
@@ -247,7 +247,6 @@
       word-break: break-word;
     }
 
-    /* Quand la ligne passe l'un sous l'autre, on réaligne l'émoji au début (à gauche) */
     .result-row.force-column {
       flex-direction: column;
       align-items: flex-start; 
@@ -345,8 +344,8 @@
 
   <script>
     const LANG_EMOJIS = {
-      "🇺🇸": "American English", "🇲🇦": "ⵜⴰⵎⴰⵣⵉⵖⵜ", "🇸🇦": "العربية",
-      "🇦🇺": "Australian English", "🇧🇷": "Português Brasileiro", "🇬🇧": "British English",
+      "🇺🇸": "American English", "🇲🇦": "ⵜⴰⵎⴰざⵉⵖⵜ", "🇸🇦": "العربية",
+      "🇦🇺": "Australian English", "🇧🇷": "Português brasileiro", "🇬🇧": "British English",
       "🇧🇬": "Български", "🇨🇳": "中文", "🇭🇷": "Hrvatski",
       "🇨🇿": "Čeština", "🇩🇰": "Dansk", "🇳🇱": "Nederlands",
       "🇪🇬": "اللهجة المصرية", "🇫🇮": "Suomi", "🇫🇷": "Français",
@@ -355,11 +354,11 @@
       "🇮🇩": "Bahasa Indonesia", "🇮🇶": "اللهجة العراقية", "🇮🇪": "Gaeilge",
       "🇮🇹": "Italiano", "🇯🇵": "日本語", "🇬🇱": "Kalaallisut",
       "🇰🇷": "한국어", "🇱🇧": "اللهجة اللبنانية", "🇱🇾": "اللهجة الليبية",
-      "🇩🇿": "الدارجة المغربية", "🇲🇾": "Bahasa Melayu", "🇲🇽": "Español Mexicano",
+      "🇩🇿": "الدارجة الجزائرية", "🇲🇾": "Bahasa Melayu", "🇲🇽": "Español mexicano",
       "🇳🇴": "Norsk", "🇮🇷": "فارسی", "🇵🇱": "Polski",
-      "🇵🇹": "Português", "🇨🇦": "Français Québécois", "🇷🇴": "Română",
+      "🇵🇹": "Português", "🇨🇦": "Français québécois", "🇷🇴": "Română",
       "🇷🇺": "Русский", "🇷🇸": "Српски", "🇪🇸": "Español",
-      "🇸🇩": "اللهجة السودانية", "🇸🇪": "Svenska", "🇵🇭": "Tagalog",
+      "🇸🇩": "اللهجة Sudanese", "🇸🇪": "Svenska", "🇵🇭": "Tagalog",
       "🇹🇭": "ไทย", "🇹🇷": "Türkçe", "🇺🇦": "Українська",
       "🇵🇰": "اردو", "🇻🇳": "Tiếng Việt"
     };
@@ -438,6 +437,7 @@
 
     async function callGemini(text, targetLang, mode, apiKey) {
       let prompt;
+      const formatRules = "DO NOT use markdown formatting like asterisks (**). Do not write introduction sentences. Answer EXACTLY using the format lines below.";
       const writingSystemInstruction = "CRITICAL: You MUST write the translation or text using the native script/alphabet and natural writing system of that language. Crucially, if the language is 'ⵜⴰⵎⴰⵣⵉⵖⵜ' (Tamazight/Amazigh), you MUST write exclusively using the native Tifinagh script. If the language is Arabic, use ONLY Arabic script characters.";
 
       if (mode === "translate" && targetLang) {
@@ -446,7 +446,8 @@
           `1. Detect the language of this text from this list ONLY: ${SUPPORTED}.\n` +
           `2. Translate the text to ${targetLang}.\n` +
           `3. Provide the exact phonetic transcription of that translation using the International Phonetic Alphabet (IPA).\n` +
-          `${writingSystemInstruction}\n\n` +
+          `${writingSystemInstruction}\n` +
+          `${formatRules}\n\n` +
           `Reply in this exact format (3 lines only):\n` +
           `LANG: <detected language>\n` +
           `RESULT: <translation>\n` +
@@ -459,7 +460,8 @@
           `1. Detect the language of this text from this list ONLY: ${SUPPORTED}.\n` +
           `2. As a humorous Discord bot, reveal the hidden true meaning of this message based on Discord/gaming clichés. Reply ${langInstruction}, short and funny.\n` +
           `3. Crucial: You MUST provide the exact phonetic transcription of that hidden truth text using the International Phonetic Alphabet (IPA) on the third line.\n` +
-          `${writingSystemInstruction}\n\n` +
+          `${writingSystemInstruction}\n` +
+          `${formatRules}\n\n` +
           `Reply in this exact format (3 lines only):\n` +
           `LANG: <detected language>\n` +
           `RESULT: <hidden truth text>\n` +
@@ -476,7 +478,7 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { temperature: 0.7 }
+              generationConfig: { temperature: 0.3 } // Baisse de la température pour plus de régularité dans la réponse
             })
           }
         );
@@ -496,20 +498,23 @@
 
       let sourceLang = null; let result = ""; let ipa = "";
 
-      for (const line of lines) {
-        if (line.startsWith("LANG:")) {
-          const detected = line.replace("LANG:", "").trim();
+      for (let line of lines) {
+        // Nettoyage ultra-flexible de la ligne pour parer aux maladresses de l'IA (enlève les astérisques et espaces blancs superflus)
+        let cleanLine = line.replace(/\*/g, "").trim();
+        
+        if (cleanLine.toUpperCase().startsWith("LANG:")) {
+          const detected = cleanLine.substring(5).trim();
           for (const lang of Object.values(LANG_EMOJIS)) {
             if (lang.toLowerCase() === detected.toLowerCase()) { sourceLang = lang; break; }
           }
-        } else if (line.startsWith("RESULT:")) {
-          result = line.replace("RESULT:", "")
+        } else if (cleanLine.toUpperCase().startsWith("RESULT:")) {
+          result = cleanLine.substring(7)
                        .replace(/hidden truth\s*:\s*/i, "")
                        .replace(/traduction discord\s*:\s*/i, "")
                        .replace(/traduction\s*:\s*/i, "")
                        .replace(/en langage discord\s*:\s*/i, "").trim();
-        } else if (line.startsWith("IPA:")) {
-          ipa = line.replace("IPA:", "").trim();
+        } else if (cleanLine.toUpperCase().startsWith("IPA:")) {
+          ipa = cleanLine.substring(4).trim();
         }
       }
 
@@ -609,7 +614,7 @@
             } else {
               setOutput(createRowHTML("result-main", emoji, result) + createRowHTML("result-ipa", "🌐", ipa));
             }
-            }
+          }
         }
         else if (backThought && selectedLang) {
           const { sourceLang, result: truthText, ipa } = await callGemini(text, targetLang, "truth", apiKey);
