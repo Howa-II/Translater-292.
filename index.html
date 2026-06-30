@@ -225,19 +225,29 @@
       display: block;
     }
 
+    /* ── GESTION STRICTE DU SAUT DE LIGNE CONDITIONNEL ── */
     .result-row {
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: row;
       align-items: flex-start;
-      gap: 0 8px;
+      gap: 8px;
       line-height: 1.7;
     }
+    
     .result-row .emoji-prefix {
-      flex-shrink: 0;
+      display: inline-block;
+      font-size: 1.3rem;
     }
+
     .result-row .text-content {
-      flex: 1 1 300px;
-      min-width: 0;
+      display: inline;
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    /* On applique la direction calculée en JS selon les longueurs de chaînes respectives */
+    .result-row[style*="--row-direction"] {
+      flex-direction: var(--row-direction, row);
     }
 
     .result-main {
@@ -247,7 +257,7 @@
     .result-ipa {
       font-size: 1.05rem;
       color: #93c5fd;
-      margin-top: 8px;
+      margin-top: 20px;
     }
     .result-muted {
       font-size: 1rem;
@@ -333,7 +343,7 @@
   <script>
     const LANG_EMOJIS = {
       "🇺🇸": "American English", "🇲🇦": "ⵜⴰⵎⴰⵣⵉⵖⵜ", "🇸🇦": "العربية",
-      "🇦🇺": "Australian English", "🇧🇷": "Português Brasileiro", "🇬🇧": "British English",
+      "🇦🇺": "Australian English", "🇧🇷": "Português brasileiro", "🇬🇧": "British English",
       "🇧🇬": "Български", "🇨🇳": "中文", "🇭🇷": "Hrvatski",
       "🇨🇿": "Čeština", "🇩🇰": "Dansk", "🇳🇱": "Nederlands",
       "🇪🇬": "اللهجة المصرية", "🇫🇮": "Suomi", "🇫🇷": "Français",
@@ -342,11 +352,11 @@
       "🇮🇩": "Bahasa Indonesia", "🇮🇶": "اللهجة العراقية", "🇮🇪": "Gaeilge",
       "🇮🇹": "Italiano", "🇯🇵": "日本語", "🇬🇱": "Kalaallisut",
       "🇰🇷": "한국어", "🇱🇧": "اللهجة اللبنانية", "🇱🇾": "اللهجة الليبية",
-      "🇩🇿": "الدارجة المغربية", "🇲🇾": "Bahasa Melayu", "🇲🇽": "Español Mexicano",
+      "🇩🇿": "الدارجة الجزائرية", "🇲🇾": "Bahasa Melayu", "🇲🇽": "Español mexicano",
       "🇳🇴": "Norsk", "🇮🇷": "فارسی", "🇵🇱": "Polski",
-      "🇵🇹": "Português", "🇨🇦": "Français Québécois", "🇷🇴": "Română",
+      "🇵🇹": "Português", "🇨🇦": "Français québécois", "🇷🇴": "Română",
       "🇷🇺": "Русский", "🇷🇸": "Српски", "🇪🇸": "Español",
-      "🇸🇩": "اللهجة السودانية", "🇸🇪": "Svenska", "🇵🇭": "Tagalog",
+      "🇸🇩": "اللهجة Sudanese", "🇸🇪": "Svenska", "🇵🇭": "Tagalog",
       "🇹🇭": "ไทย", "🇹🇷": "Türkçe", "🇺🇦": "Українська",
       "🇵🇰": "اردو", "🇻🇳": "Tiếng Việt"
     };
@@ -409,9 +419,15 @@
       if (btn) btn.classList.toggle("active", backThought);
     }
 
+    // Gère le cas de figure de manière totalement indépendante pour chaque bloc de texte injecté
     function createRowHTML(className, emoji, text) {
+      const len = text.length;
+      const isMobile = window.innerWidth <= 600;
+      const limit = isMobile ? 40 : 70;
+      const direction = len > limit ? "column" : "row";
+
       return `
-        <div class="${className} result-row">
+        <div class="${className} result-row" style="--row-direction: ${direction};">
           <span class="emoji-prefix">${emoji}</span>
           <span class="text-content">${text}</span>
         </div>
@@ -420,7 +436,7 @@
 
     async function callGemini(text, targetLang, mode, apiKey) {
       let prompt;
-      const writingSystemInstruction = "CRITICAL: You MUST write the translation or text using the native script/alphabet and natural writing system of that language. Crucially, if the language is 'ⵜⴰⵎⴰⵣⵉⵖⵜ' (Tamazight/Amazigh), you MUST write exclusively using the native Tifinagh script (e.g. ⴰ, ⴱ, ⴳ...). If the language is Arabic or an Arabic dialect, use ONLY Arabic script characters (مثل سلام), NEVER transliterate or use the Latin alphabet.";
+      const writingSystemInstruction = "CRITICAL: You MUST write the translation or text using the native script/alphabet and natural writing system of that language. Crucially, if the language is 'ⵜⴰⵎⴰざⵉⵖⵜ' (Tamazight/Amazigh), you MUST write exclusively using the native Tifinagh script. If the language is Arabic, use ONLY Arabic script characters.";
 
       if (mode === "translate" && targetLang) {
         prompt =
@@ -435,16 +451,14 @@
           `IPA: <international phonetic alphabet transcription>\n\n` +
           `Text: ${text}`;
       } else {
-        const langInstruction = targetLang
-          ? `in ${targetLang}`
-          : "in the same language as the original text";
+        const langInstruction = targetLang ? `in ${targetLang}` : "in the same language as the original text";
         prompt =
           `Do three things at once:\n` +
           `1. Detect the language of this text from this list ONLY: ${SUPPORTED}.\n` +
           `2. As a humorous Discord bot, reveal the hidden true meaning of this message based on Discord/gaming clichés. Reply ${langInstruction}, short and funny.\n` +
           `3. Crucial: You MUST provide the exact phonetic transcription of that hidden truth text using the International Phonetic Alphabet (IPA) on the third line.\n` +
           `${writingSystemInstruction}\n\n` +
-          `Reply in this exact format (3 lines only, do not include labels like 'Hidden Truth:', 'Traduction Discord:', 'Traduction :' or 'En langage Discord :' inside the content):\n` +
+          `Reply in this exact format (3 lines only):\n` +
           `LANG: <detected language>\n` +
           `RESULT: <hidden truth text>\n` +
           `IPA: <international phonetic alphabet transcription>\n\n` +
@@ -465,43 +479,33 @@
           }
         );
       } catch (netErr) {
-        const e = new Error("Network error");
-        e.isGeminiCrash = true;
-        throw e;
+        const e = new Error("Network error"); e.isGeminiCrash = true; throw e;
       }
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
         const msg = errData.error?.message || "Gemini API failure";
-        const e = new Error(msg);
-        e.isGeminiCrash = true;
-        throw e;
+        const e = new Error(msg); e.isGeminiCrash = true; throw e;
       }
 
       const data = await response.json();
       const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
       const lines = raw.trim().split("\n");
 
-      let sourceLang = null;
-      let result = "";
-      let ipa = "";
+      let sourceLang = null; let result = ""; let ipa = "";
 
       for (const line of lines) {
         if (line.startsWith("LANG:")) {
           const detected = line.replace("LANG:", "").trim();
           for (const lang of Object.values(LANG_EMOJIS)) {
-            if (lang.toLowerCase() === detected.toLowerCase()) {
-              sourceLang = lang;
-              break;
-            }
+            if (lang.toLowerCase() === detected.toLowerCase()) { sourceLang = lang; break; }
           }
         } else if (line.startsWith("RESULT:")) {
           result = line.replace("RESULT:", "")
                        .replace(/hidden truth\s*:\s*/i, "")
                        .replace(/traduction discord\s*:\s*/i, "")
                        .replace(/traduction\s*:\s*/i, "")
-                       .replace(/en langage discord\s*:\s*/i, "")
-                       .trim();
+                       .replace(/en langage discord\s*:\s*/i, "").trim();
         } else if (line.startsWith("IPA:")) {
           ipa = line.replace("IPA:", "").trim();
         }
@@ -523,9 +527,7 @@
 
     function hideOutput() {
       const block = document.getElementById("output-block");
-      if (block) {
-        block.classList.remove("visible");
-      }
+      if (block) block.classList.remove("visible");
     }
 
     function setButtonsState(loading) {
@@ -534,43 +536,35 @@
       if (!cBtn || !xBtn) return;
 
       if (loading) {
-        cBtn.disabled = true;
-        xBtn.disabled = true;
+        cBtn.disabled = true; xBtn.disabled = true;
         cBtn.innerHTML = '⏳ Processing<br>...';
       } else {
-        cBtn.disabled = false;
-        xBtn.disabled = false;
+        cBtn.disabled = false; xBtn.disabled = false;
         cBtn.innerHTML = '✅ Confirm';
       }
     }
 
     function handleCancel() {
       setOutput(`<p class="result-main">❌ Cancelled</p>`);
-
       setTimeout(() => {
         const apiKeyEl = document.getElementById("api-key");
         const inputEl = document.getElementById("text-input");
         if (apiKeyEl) apiKeyEl.value = "";
         if (inputEl) inputEl.value = "";
-
         selectedLang = null;
         document.querySelectorAll(".lang-btn").forEach(b => b.classList.remove("selected"));
         const label = document.getElementById("selected-lang-label");
         if (label) label.textContent = "";
-
         backThought = false;
         const btBtn = document.getElementById("bt-btn");
         if (btBtn) btBtn.classList.remove("active");
-
-        updateCounter();
-        hideOutput();
+        updateCounter(); hideOutput();
       }, 1200); 
     }
 
     async function handleConfirm() {
       const apiKeyEl = document.getElementById("api-key");
       const inputEl = document.getElementById("text-input");
-
       const apiKey = apiKeyEl ? apiKeyEl.value.trim() : "";
       const text = inputEl ? inputEl.value.trim() : "";
       const hasAction = selectedLang || backThought;
@@ -582,13 +576,9 @@
 
       if (missing.length > 0) {
         let errorMsg = "⚠️\nPlease,\n";
-        if (missing.length === 1) {
-          errorMsg += missing[0];
-        } else if (missing.length === 2) {
-          errorMsg += `${missing[0]},\nand ${missing[1]}`;
-        } else if (missing.length === 3) {
-          errorMsg += `${missing[0]},\n${missing[1]},\nand ${missing[2]}`;
-        }
+        if (missing.length === 1) errorMsg += missing[0];
+        else if (missing.length === 2) errorMsg += `${missing[0]},\nand ${missing[1]}`;
+        else if (missing.length === 3) errorMsg += `${missing[0]},\n${missing[1]},\nand ${missing[2]}`;
         setOutput(`<p class="error-msg">${errorMsg}</p>`, true);
         return;
       }
@@ -598,14 +588,11 @@
       try {
         const targetLang = selectedLang ? LANG_EMOJIS[selectedLang] : null;
 
-        // CAS 1 : Back Thought seul
         if (backThought && !selectedLang) {
           const { sourceLang, result } = await callGemini(text, null, "truth", apiKey);
           if (!sourceLang) { setOutput(`<p class="error-msg">❌ Language Not Supported</p>`, true); return; }
           setOutput(`<p class="result-main">${result}</p>`);
         }
-
-        // CAS 2 : Traduction classique seule
         else if (!backThought && selectedLang) {
           const { sourceLang, result, ipa } = await callGemini(text, targetLang, "translate", apiKey);
           if (!sourceLang) { setOutput(`<p class="error-msg">❌ Language Not Supported</p>`, true); return; }
@@ -615,18 +602,13 @@
           if (sourceLang === targetLang) {
             setOutput(`<p class="result-muted">${emoji} Already in ${sourceLang}.</p>`);
           } else {
-            // Si l'IPA est manquant ou invalide, on affiche l'erreur "Please, Try Again"
             if (!ipa || ipa.toUpperCase() === "N/A" || ipa.trim() === "") {
               setOutput(`<p class="error-msg">⚠️ Please, Try Again</p>`, true);
             } else {
-              const mainRowHTML = createRowHTML("result-main", emoji, result);
-              const ipaRowHTML = createRowHTML("result-ipa", "🌐", ipa);
-              setOutput(mainRowHTML + ipaRowHTML);
+              setOutput(createRowHTML("result-main", emoji, result) + createRowHTML("result-ipa", "🌐", ipa));
             }
           }
         }
-
-        // CAS 3 : Back Thought + Traduction combinés
         else if (backThought && selectedLang) {
           const { sourceLang, result: truthText, ipa } = await callGemini(text, targetLang, "truth", apiKey);
           if (!sourceLang) { setOutput(`<p class="error-msg">❌ Language Not Supported</p>`, true); return; }
@@ -634,28 +616,17 @@
           const emoji = LANG_TO_EMOJI[sourceLang] ?? "🏳️";
 
           if (sourceLang === targetLang) {
-            setOutput(
-              `<p class="result-muted">${emoji} Already in ${sourceLang}.</p>` +
-              `<p class="result-truth">${truthText}</p>`
-            );
+            setOutput(`<p class="result-muted">${emoji} Already in ${sourceLang}.</p><p class="result-truth">${truthText}</p>`);
           } else {
-            // Si l'IPA est manquant ou invalide, on affiche l'erreur "Please, Try Again"
             if (!ipa || ipa.toUpperCase() === "N/A" || ipa.trim() === "") {
               setOutput(`<p class="error-msg">⚠️ Please, Try Again</p>`, true);
             } else {
-              const mainRowHTML = createRowHTML("result-main", emoji, truthText);
-              const ipaRowHTML = createRowHTML("result-ipa", "🌐", ipa);
-              setOutput(mainRowHTML + ipaRowHTML);
+              setOutput(createRowHTML("result-main", emoji, truthText) + createRowHTML("result-ipa", "🌐", ipa));
             }
           }
         }
-
       } catch (e) {
-        if (e.isGeminiCrash) {
-          setOutput(`<p class="error-msg">⚠️ Please, Try Again</p>`, true);
-        } else {
-          setOutput(`<p class="error-msg">❌ ${e.message}</p>`, true);
-        }
+        setOutput(e.isGeminiCrash ? `<p class="error-msg">⚠️ Please, Try Again</p>` : `<p class="error-msg">❌ ${e.message}</p>`, true);
       } finally {
         setButtonsState(false);
       }
