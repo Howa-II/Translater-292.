@@ -333,7 +333,7 @@
   <script>
     const LANG_EMOJIS = {
       "🇺🇸": "American English", "🇲🇦": "ⵜⴰⵎⴰⵣⵉⵖⵜ", "🇸🇦": "العربية",
-      "🇦🇺": "Australian English", "🇧🇷": "Português Brasileiro", "🇬🇧": "British English",
+      "🇦🇺": "Australian English", "🇧🇷": "Português brasileiro", "🇬🇧": "British English",
       "🇧🇬": "Български", "🇨🇳": "中文", "🇭🇷": "Hrvatski",
       "🇨🇿": "Čeština", "🇩🇰": "Dansk", "🇳🇱": "Nederlands",
       "🇪🇬": "اللهجة المصرية", "🇫🇮": "Suomi", "🇫🇷": "Français",
@@ -342,11 +342,11 @@
       "🇮🇩": "Bahasa Indonesia", "🇮🇶": "اللهجة العراقية", "🇮🇪": "Gaeilge",
       "🇮🇹": "Italiano", "🇯🇵": "日本語", "🇬🇱": "Kalaallisut",
       "🇰🇷": "한국어", "🇱🇧": "اللهجة اللبنانية", "🇱🇾": "اللهجة الليبية",
-      "🇩🇿": "الدارجة المغربية", "🇲🇾": "Bahasa Melayu", "🇲🇽": "Español Mexicano",
+      "🇩🇿": "الدارجة الجزائرية", "🇲🇾": "Bahasa Melayu", "🇲🇽": "Español mexicano",
       "🇳🇴": "Norsk", "🇮🇷": "فارسی", "🇵🇱": "Polski",
-      "🇵🇹": "Português", "🇨🇦": "Français Québécois", "🇷🇴": "Română",
+      "🇵🇹": "Português", "🇨🇦": "Français québécois", "🇷🇴": "Română",
       "🇷🇺": "Русский", "🇷🇸": "Српски", "🇪🇸": "Español",
-      "🇸🇩": "اللهجة السودانية", "🇸🇪": "Svenska", "🇵🇭": "Tagalog",
+      "🇸🇩": "اللهجة Sudanese", "🇸🇪": "Svenska", "🇵🇭": "Tagalog",
       "🇹🇭": "ไทย", "🇹🇷": "Türkçe", "🇺🇦": "Українська",
       "🇵🇰": "اردو", "🇻🇳": "Tiếng Việt"
     };
@@ -623,7 +623,11 @@
           const { sourceLang, result: truthText, ipa } = await callGemini(text, targetLang, "truth", apiKey);
           if (!sourceLang) { setOutput(`<p class="error-msg">❌ Language Not Supported</p>`, true); return; }
           
-          const emoji = LANG_TO_EMOJI[sourceLang}.</p>` +
+          const emoji = LANG_TO_EMOJI[sourceLang] ?? "🏳️";
+
+          if (sourceLang === targetLang) {
+            setOutput(
+              `<p class="result-muted">${emoji} Already in ${sourceLang}.</p>` +
               `<p class="result-truth">${truthText}</p>`
             );
           } else {
