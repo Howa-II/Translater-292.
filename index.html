@@ -249,13 +249,6 @@
       color: #93c5fd;
       margin-top: 8px;
     }
-    .result-credit {
-      font-size: 0.75rem;
-      color: #4e4e61;
-      margin-top: 16px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
     .result-muted {
       font-size: 1rem;
       color: #6b6b80;
@@ -274,17 +267,6 @@
       line-height: 1.6;
       white-space: pre-line;
     }
-
-    /* ── Loader ── */
-    .loader {
-      display: inline-block;
-      width: 18px; height: 18px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -375,7 +357,7 @@
     let selectedLang = null;
     let backThought = false;
 
-    // Génération immédiate de la grille (sans attendre DOMContentLoaded)
+    // Génération immédiate de la grille des langues
     const grid = document.getElementById("lang-grid");
     if (grid) {
       Object.entries(LANG_EMOJIS).forEach(([emoji, lang]) => {
@@ -439,7 +421,7 @@
 
     async function callGemini(text, targetLang, mode, apiKey) {
       let prompt;
-      const writingSystemInstruction = "CRITICAL: You MUST write the translation or text using the native script/alphabet and natural writing system of that language. Crucially, if the language is 'ⵜⴰⵎⴰざⵉⵖⵜ' (Tamazight/Amazigh), you MUST write exclusively using the native Tifinagh script (e.g. ⴰ, ⴱ, ⴳ...). If the language is Arabic or an Arabic dialect, use ONLY Arabic script characters (مثل سلام), NEVER transliterate or use the Latin alphabet.";
+      const writingSystemInstruction = "CRITICAL: You MUST write the translation or text using the native script/alphabet and natural writing system of that language. Crucially, if the language is 'ⵜⴰⵎⴰⵣⵉⵖⵜ' (Tamazight/Amazigh), you MUST write exclusively using the native Tifinagh script (e.g. ⴰ, ⴱ, 疑...). If the language is Arabic or an Arabic dialect, use ONLY Arabic script characters (مثل سلام), NEVER transliterate or use the Latin alphabet.";
 
       if (mode === "translate" && targetLang) {
         prompt =
@@ -550,7 +532,7 @@
       if (loading) {
         cBtn.disabled = true;
         xBtn.disabled = true;
-        cBtn.innerHTML = '<span class="loader"></span> ⏳ Processing<br>. . .';
+        cBtn.innerHTML = '⏳ Processing<br>...';
       } else {
         cBtn.disabled = false;
         xBtn.disabled = false;
@@ -612,12 +594,14 @@
       try {
         const targetLang = selectedLang ? LANG_EMOJIS[selectedLang] : null;
 
+        // CAS 1 : Back Thought seul
         if (backThought && !selectedLang) {
           const { sourceLang, result } = await callGemini(text, null, "truth", apiKey);
           if (!sourceLang) { setOutput(`<p class="error-msg">❌ Language Not Supported</p>`, true); return; }
           setOutput(`<p class="result-main">${result}</p>`);
         }
 
+        // CAS 2 : Traduction classique seule
         else if (!backThought && selectedLang) {
           const { sourceLang, result, ipa } = await callGemini(text, targetLang, "translate", apiKey);
           if (!sourceLang) { setOutput(`<p class="error-msg">❌ Language Not Supported</p>`, true); return; }
@@ -629,11 +613,24 @@
             const mainRowHTML = createRowHTML("result-main", emoji, result);
             const ipaRowHTML = createRowHTML("result-ipa", "🌐", ipa || "N/A");
             
-            setOutput(
-              mainRowHTML +
-              ipaRowHTML +
-              `<p class="result-credit">Translated by Gemin 2.5 Flash</p>`
+            setOutput(mainRowHTML + ipaRowHTML);
+          }
+        }
+
+        // CAS 3 : Back Thought + Traduction combinés
+        else if (backThought && selectedLang) {
+          // Étape 1 : On récupère d'abord la vérité cachée (en demandant l'API de répondre directement dans la langue cible voulue)
+          const { sourceLang, result: truthText, ipa } = await callGemini(text, targetLang, "truth", apiKey);
+          if (!sourceLang) { setOutput(`<p class="error-msg">❌ Language Not Supported</p>`, true); return; }
+          
+          const emoji = LANG_TO_EMOJI[sourceLang}.</p>` +
+              `<p class="result-truth">${truthText}</p>`
             );
+          } else {
+            const mainRowHTML = createRowHTML("result-main", emoji, truthText);
+            const ipaRowHTML = createRowHTML("result-ipa", "🌐", ipa || "N/A");
+
+            setOutput(mainRowHTML + ipaRowHTML);
           }
         }
 
