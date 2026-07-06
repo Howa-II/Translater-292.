@@ -657,7 +657,7 @@
           setOutput(`<p class="result-main">${result}</p>`);
         }
         else if (!backThought && selectedLang) {
-const { sourceLang, result, ipa } = await callGemini(text, targetLang, "translate", apiKey);
+          const { sourceLang, result, ipa } = await callGemini(text, targetLang, "translate", apiKey);
           if (!sourceLang) {
             setOutput(`<p class="error-msg">⚠️\n  Language Not Registered</p>`, true);
             return;
@@ -690,7 +690,7 @@ const { sourceLang, result, ipa } = await callGemini(text, targetLang, "translat
               htmlResult += createRowHTML("result-ipa", "🌐", ipa);
             }
             setOutput(htmlResult);
-          }       
+          }
         }
       } catch (e) {
         if (e.message === "QUOTA_ERROR") {
