@@ -92,7 +92,7 @@
     .textarea-wrapper:focus-within {
       border-color: #a78bfa;
     }
-    
+
     /* Gouttière des numéros de ligne */
     .line-numbers {
       text-align: right;
@@ -331,7 +331,7 @@
     <div class="block">
       <div class="block-title">Provide a Message</div>
       <div class="textarea-wrapper">
-        <div class="line-numbers" id="line-numbers">1</div>
+        <div class="line-numbers" id="line-numbers"></div>
         <textarea id="text-input" placeholder="292 . . ." maxlength="292" oninput="handleInput()"></textarea>
       </div>
       <div class="textarea-footer">
@@ -371,7 +371,7 @@
   <script>
     const LANG_EMOJIS = {
       "🇺🇸": "American English",
-      "🇲🇦": "ⵜⴰ幕ⴰⵣⵉⵖⵜ",
+      "🇲🇦": "ⵜⴰⵎⴰⵣⵉⵖⵜ",
       "🇦🇺": "Australian English",
       "🇮🇩": "Bahasa Indonesia",
       "🇲🇾": "Bahasa Melayu",
@@ -463,14 +463,18 @@
         warningZone.classList.remove("visible");
       }
 
-      // 2. Génération automatique des numéros de lignes
-      const lines = textarea.value.split('\n');
-      const lineCount = lines.length;
-      let numberString = '';
-      for (let i = 1; i <= lineCount; i++) {
-        numberString += i + '\n';
+      // 2. Génération automatique des numéros de lignes (rien si vide)
+      if (textarea.value === '') {
+        lineNumbersDiv.textContent = '';
+      } else {
+        const lines = textarea.value.split('\n');
+        const lineCount = lines.length;
+        let numberString = '';
+        for (let i = 1; i <= lineCount; i++) {
+          numberString += i + '\n';
+        }
+        lineNumbersDiv.textContent = numberString.trim();
       }
-      lineNumbersDiv.textContent = numberString.trim();
     }
 
     function selectLang(emoji) {
