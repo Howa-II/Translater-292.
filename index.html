@@ -339,7 +339,7 @@
       </div>
       <div class="limit-warning-zone" id="limit-warning-zone">
         <hr class="limit-warning-line" />
-        <div class="limit-warning-text" id="limit-warning-text">❌ It is Impossible to Enter More than 292 Characters</div>
+        <div class="limit-warning-text" id="limit-warning-text">⚠️\nPlease, it is Impossible to Enter More than 292 Characters</div>
       </div>
     </div>
 
@@ -400,7 +400,7 @@
       "🇻🇳": "Tiếng Việt",
       "🇹🇷": "Türkçe",
       "🇵🇰": "اردو",
-      "🇸🇦": "العربية",
+      "🇸🇦": "العربية التقليدية",
       "🇩🇿": "الدارجة المغربية",
       "🇪🇬": "اللهجة المصرية",
       "🇮🇶": "اللهجة العراقية",
@@ -520,7 +520,7 @@
         const warningZone = document.getElementById("limit-warning-zone");
         const warningText = document.getElementById("limit-warning-text");
         if (warningZone && warningText) {
-          warningText.textContent = "❌ Please, It is Impossible to Enter a World More than a Line";
+          warningText.textContent = "⚠️\nPlease, it is Impossible to Enter a World More than a Line";
           warningZone.classList.add("visible");
         }
       }
@@ -556,11 +556,11 @@
       // 3. Alertes
       if (currentLength >= 292) {
         counter.classList.add("limit-reached");
-        warningText.textContent = "❌ It is Impossible to Enter More than 292 Characters";
+        warningText.textContent = "⚠️\nPlease, it is Impossible to Enter More than 292 Characters";
         warningZone.classList.add("visible");
       } else if (wordTooLong) {
         counter.classList.remove("limit-reached");
-        warningText.textContent = "❌ Please, It is Impossible to Enter a World More than a Line";
+        warningText.textContent = "⚠️\nPlease, it is Impossible to Enter a World More than a Line";
         warningZone.classList.add("visible");
       } else {
         counter.classList.remove("limit-reached");
@@ -837,11 +837,11 @@
         }
       } catch (e) {
         if (e.message === "QUOTA_ERROR") {
-          setOutput(`<p class="error-msg">⚠️ Please, your Plan Limit has been Reached</p>`, true);
+          setOutput(`<p class="error-msg">⚠️\nPlease, \nYour Plan Limit has been Reached</p>`, true);
         } else if (e.message === "API_KEY_ERROR") {
-          setOutput(`<p class="error-msg">⚠️ Please, Check you GEMINI API KEY</p>`, true);
+          setOutput(`<p class="error-msg">⚠️\nPlease, \nCheck your GEMINI API KEY</p>`, true);
         } else {
-          setOutput(`<p class="error-msg">⚠️ Please, Try Again</p>`, true);
+          setOutput(`<p class="error-msg">⚠️\nPlease, \nTry Again</p>`, true);
         }
       } finally {
         setButtonsState(false);
