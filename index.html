@@ -339,7 +339,7 @@
       </div>
       <div class="limit-warning-zone" id="limit-warning-zone">
         <hr class="limit-warning-line" />
-        <div class="limit-warning-text">❌ It is Impossible to Enter More than 292 Characters</div>
+        <div class="limit-warning-text" id="limit-warning-text">❌ It is Impossible to Enter More than 292 Characters</div>
       </div>
     </div>
 
@@ -443,39 +443,97 @@
       });
     }
 
+    // Mesure la largeur d'un texte avec la police donnée (pour simuler le retour à la ligne du textarea)
+    let _measureCanvas = null;
+    function getTextWidth(text, font) {
+      if (!_measureCanvas) _measureCanvas = document.createElement("canvas");
+      const context = _measureCanvas.getContext("2d");
+      context.font = font;
+      return context.measureText(text).width;
+    }
+
+    // Simule le retour à la ligne visuel du textarea pour compter le nombre réel de lignes affichées
+    // et détecter si un mot seul dépasse la largeur disponible.
+    function computeWrappedLines(textarea) {
+      const style = window.getComputedStyle(textarea);
+      const font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      const paddingLeft = parseFloat(style.paddingLeft) || 0;
+      const paddingRight = parseFloat(style.paddingRight) || 0;
+      const availableWidth = textarea.clientWidth - paddingLeft - paddingRight;
+
+      const rawLines = textarea.value.split('\n');
+      let totalRows = 0;
+      let wordTooLong = false;
+
+      rawLines.forEach(line => {
+        if (line === '') {
+          totalRows += 1;
+          return;
+        }
+        const words = line.split(' ');
+        let rowCount = 1;
+        let currentWidth = 0;
+        words.forEach((word, idx) => {
+          const wordWidth = getTextWidth(word, font);
+          if (wordWidth > availableWidth) wordTooLong = true;
+          const spaceWidth = idx === 0 ? 0 : getTextWidth(' ', font);
+          const addedWidth = spaceWidth + wordWidth;
+          if (currentWidth + addedWidth > availableWidth && currentWidth > 0) {
+            rowCount += 1;
+            currentWidth = wordWidth;
+          } else {
+            currentWidth += addedWidth;
+          }
+        });
+        totalRows += rowCount;
+      });
+
+      return { totalRows, wordTooLong };
+    }
+
     // Gestion de la saisie + mise à jour des compteurs et numéros de lignes
     function handleInput() {
       const textarea = document.getElementById("text-input");
       const counter = document.getElementById("char-counter");
       const warningZone = document.getElementById("limit-warning-zone");
+      const warningText = document.getElementById("limit-warning-text");
       const lineNumbersDiv = document.getElementById("line-numbers");
-      if (!textarea || !counter || !warningZone || !lineNumbersDiv) return;
+      if (!textarea || !counter || !warningZone || !warningText || !lineNumbersDiv) return;
 
       // 1. Compteur de caractères
       const currentLength = textarea.value.length;
       counter.textContent = `${currentLength} / 292`;
 
+      // 2. Génération automatique des numéros de lignes (compte aussi les retours à la ligne visuels)
+      let wordTooLong = false;
+      if (textarea.value === '') {
+        lineNumbersDiv.textContent = '';
+      } else {
+        const { totalRows, wordTooLong: tooLong } = computeWrappedLines(textarea);
+        wordTooLong = tooLong;
+        let numberString = '';
+        for (let i = 1; i <= totalRows; i++) {
+          numberString += i + '\n';
+        }
+        lineNumbersDiv.textContent = numberString.trim();
+      }
+
+      // 3. Alertes
       if (currentLength >= 292) {
         counter.classList.add("limit-reached");
+        warningText.textContent = "❌ It is Impossible to Enter More than 292 Characters";
+        warningZone.classList.add("visible");
+      } else if (wordTooLong) {
+        counter.classList.remove("limit-reached");
+        warningText.textContent = "❌ Please, It Impossible to Enter a World More than a Line";
         warningZone.classList.add("visible");
       } else {
         counter.classList.remove("limit-reached");
         warningZone.classList.remove("visible");
       }
-
-      // 2. Génération automatique des numéros de lignes (rien si vide)
-      if (textarea.value === '') {
-        lineNumbersDiv.textContent = '';
-      } else {
-        const lines = textarea.value.split('\n');
-        const lineCount = lines.length;
-        let numberString = '';
-        for (let i = 1; i <= lineCount; i++) {
-          numberString += i + '\n';
-        }
-        lineNumbersDiv.textContent = numberString.trim();
-      }
     }
+
+    window.addEventListener("resize", handleInput);
 
     function selectLang(emoji) {
       if (selectedLang === emoji) {
