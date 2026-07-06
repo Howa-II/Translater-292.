@@ -27,7 +27,7 @@
       font-size: 2.2rem;
       font-weight: 700;
       letter-spacing: -0.03em;
-      color: #FF0058; /* Changement de couleur demandé */
+      color: #FF0058;
     }
     header p {
       color: #6b6b80;
@@ -161,7 +161,7 @@
     /* ── Bloc 4 : Target Languages ── */
     .lang-grid {
       display: grid;
-      grid-template-columns: repeat(5, 1fr); /* Force 5 colonnes sur PC */
+      grid-template-columns: repeat(5, 1fr);
       gap: 10px;
     }
     .lang-btn {
@@ -188,14 +188,14 @@
       font-weight: 500;
     }
 
-    /* ── Ajustement Responsive Mobile (Maintien strict des 5 colonnes) ── */
+    /* ── Ajustement Responsive Mobile ── */
     @media (max-width: 480px) {
       .lang-grid {
-        grid-template-columns: repeat(5, 1fr); /* Force 5 colonnes sur Mobile également */
-        gap: 6px; /* Réduit l'espace pour éviter les débordements */
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
       }
       .lang-btn {
-        font-size: 1.25rem; /* Ajuste la taille de l'emoji pour le petit écran */
+        font-size: 1.25rem;
         padding: 10px 0;
       }
     }
@@ -300,7 +300,6 @@
 
   <div class="container">
 
-    <!-- BLOC 1: GEMINI API KEY -->
     <div class="block">
       <div class="block-title">GEMINI API KEY</div>
       <div class="key-input-container">
@@ -308,7 +307,6 @@
       </div>
     </div>
 
-    <!-- BLOC 2: Provide a Message -->
     <div class="block">
       <div class="block-title">Provide a Message</div>
       <div class="textarea-container">
@@ -323,20 +321,17 @@
       </div>
     </div>
 
-    <!-- BLOC 3: Back Thought -->
     <div class="block">
       <div class="block-title">Back Thought</div>
       <button id="bt-btn" onclick="toggleBT()">🔎 Reveal the Hidden Truth</button>
     </div>
 
-    <!-- BLOC 4: The Target Languages -->
     <div class="block">
       <div class="block-title">The Target Languages</div>
       <div class="lang-grid" id="lang-grid"></div>
       <div id="selected-lang-label"></div>
     </div>
 
-    <!-- BLOC 5: CONFIRM / CANCEL -->
     <div class="block" style="background: transparent; border: none; box-shadow: none; padding: 0;">
       <div class="action-area">
         <button id="confirm-btn" class="action-btn" onclick="handleConfirm()">✅ Confirm</button>
@@ -344,7 +339,6 @@
       </div>
     </div>
 
-    <!-- BLOC 6: OUTPUT & ERRORS -->
     <div class="block" id="output-block">
       <div class="block-title" id="output-title">Response</div>
       <div id="output-inner"></div>
@@ -384,7 +378,7 @@
       "🇻🇳": "Tiếng Việt",
       "🇹🇷": "Türkçe",
       "🇵🇰": "اردو",
-      "🇸🇦": "العربية التقليدية",
+      "🇸🇦": "العربية",
       "🇩🇿": "الدارجة المغربية",
       "🇪🇬": "اللهجة المصرية",
       "🇮🇶": "اللهجة العراقية",
@@ -656,14 +650,21 @@
 
         if (backThought && !selectedLang) {
           const { sourceLang, result } = await callGemini(text, null, "truth", apiKey);
+          if (!sourceLang) {
+            setOutput(`<p class="error-msg">⚠️\n  Language Not Registered</p>`, true);
+            return;
+          }
           setOutput(`<p class="result-main">${result}</p>`);
         }
         else if (!backThought && selectedLang) {
-          const { sourceLang, result, ipa } = await callGemini(text, targetLang, "translate", apiKey);
-          const currentSource = sourceLang || "Français";
-          const emoji = LANG_TO_EMOJI[currentSource] ?? "🏳️";
+const { sourceLang, result, ipa } = await callGemini(text, targetLang, "translate", apiKey);
+          if (!sourceLang) {
+            setOutput(`<p class="error-msg">⚠️\n  Language Not Registered</p>`, true);
+            return;
+          }
           
-          if (sourceLang && sourceLang === targetLang) {
+          const emoji = LANG_TO_EMOJI[sourceLang];
+          if (sourceLang === targetLang) {
             setOutput(`<p class="result-muted">${emoji} Already in ${sourceLang}.</p>`);
           } else {
             let htmlResult = createRowHTML("result-main", emoji, result || "Translation error");
@@ -675,10 +676,13 @@
         }
         else if (backThought && selectedLang) {
           const { sourceLang, result: truthText, ipa } = await callGemini(text, targetLang, "truth", apiKey);
-          const currentSource = sourceLang || "Français";
-          const emoji = LANG_TO_EMOJI[currentSource] ?? "🏳️";
-
-          if (sourceLang && sourceLang === targetLang) {
+          if (!sourceLang) {
+            setOutput(`<p class="error-msg">⚠️\n  Language Not Registered</p>`, true);
+            return;
+          }
+          
+          const emoji = LANG_TO_EMOJI[sourceLang];
+          if (sourceLang === targetLang) {
             setOutput(`<p class="result-muted">${emoji} Already in ${sourceLang}.</p><p class="result-truth">${truthText}</p>`);
           } else {
             let htmlResult = createRowHTML("result-main", emoji, truthText || "Error processing truth");
@@ -686,15 +690,15 @@
               htmlResult += createRowHTML("result-ipa", "🌐", ipa);
             }
             setOutput(htmlResult);
-          }
+          }       
         }
       } catch (e) {
         if (e.message === "QUOTA_ERROR") {
-          setOutput(`<p class="error-msg">⚠️\nYour Plan Limit has been Reached</p>`, true);
+          setOutput(`<p class="error-msg">⚠️ Please, your Plan Limit has been Reached</p>`, true);
         } else if (e.message === "API_KEY_ERROR") {
-          setOutput(`<p class="error-msg">⚠️\nPlease,\nCheck you GEMINI API KEY</p>`, true);
+          setOutput(`<p class="error-msg">⚠️ Please, Check you GEMINI API KEY</p>`, true);
         } else {
-          setOutput(`<p class="error-msg">⚠️\nPlease,\nTry Again</p>`, true);
+          setOutput(`<p class="error-msg">⚠️ Please, Try Again</p>`, true);
         }
       } finally {
         setButtonsState(false);
@@ -703,4 +707,3 @@
   </script>
 </body>
 </html>
-     
