@@ -95,6 +95,8 @@
 
     /* Gouttière des numéros de ligne */
     .line-numbers {
+      flex-shrink: 0;
+      min-width: 2.4em;
       text-align: right;
       padding-right: 12px;
       color: #4e4e61;
@@ -111,6 +113,7 @@
       border: none;
       outline: none;
       resize: none;
+      overflow: hidden;
       font-size: 1.05rem;
       color: #e8e8f0;
       line-height: 1.6;
@@ -142,7 +145,7 @@
       transition: all 0.2s ease-in-out;
     }
     .limit-warning-zone.visible {
-      max-height: 50px;
+      max-height: 100px;
       opacity: 1;
       margin-top: 12px;
     }
@@ -155,6 +158,7 @@
       color: #f87171;
       font-size: 0.85rem;
       font-weight: 500;
+      white-space: pre-line;
     }
 
     /* ── Bloc 3 : Back Thought ── */
@@ -304,6 +308,12 @@
       line-height: 1.7;
       margin-top: 12px;
     }
+    .result-caption {
+      font-size: 0.8rem;
+      color: #6b6b80;
+      font-style: italic;
+      margin-top: 14px;
+    }
     .error-msg { 
       color: #f87171; 
       font-size: 1.05rem; 
@@ -339,7 +349,9 @@
       </div>
       <div class="limit-warning-zone" id="limit-warning-zone">
         <hr class="limit-warning-line" />
-        <div class="limit-warning-text" id="limit-warning-text">⚠️\nPlease, it is Impossible to Provide More than 292 Characters."</div>
+        <div class="limit-warning-text" id="limit-warning-text">⚠️
+Please,
+It is Impossible to Provide More than 292 Characters</div>
       </div>
     </div>
 
@@ -475,7 +487,18 @@
         let currentWidth = 0;
         words.forEach((word, idx) => {
           const wordWidth = getTextWidth(word, font);
-          if (wordWidth > availableWidth) wordTooLong = true;
+
+          if (wordWidth > availableWidth && availableWidth > 0) {
+            wordTooLong = true;
+            // Le mot seul est plus large que la ligne : il occupe plusieurs lignes à lui seul,
+            // comme le ferait réellement le textarea.
+            if (currentWidth > 0) rowCount += 1;
+            rowCount += Math.ceil(wordWidth / availableWidth) - 1;
+            const remainder = wordWidth % availableWidth;
+            currentWidth = remainder || availableWidth;
+            return;
+          }
+
           const spaceWidth = idx === 0 ? 0 : getTextWidth(' ', font);
           const addedWidth = spaceWidth + wordWidth;
           if (currentWidth + addedWidth > availableWidth && currentWidth > 0) {
@@ -491,40 +514,7 @@
       return { totalRows, wordTooLong };
     }
 
-    // Vérifie si un mot donné dépasserait la largeur disponible du textarea
-    function isWordOverflow(word, textarea) {
-      const style = window.getComputedStyle(textarea);
-      const font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-      const paddingLeft = parseFloat(style.paddingLeft) || 0;
-      const paddingRight = parseFloat(style.paddingRight) || 0;
-      const availableWidth = textarea.clientWidth - paddingLeft - paddingRight;
-      return getTextWidth(word, font) > availableWidth;
-    }
-
-    // Bloque la frappe d'un caractère si le mot en cours dépasserait la ligne (comme la limite de 292 caractères).
-    // Un espace (ou saut de ligne) est toujours autorisé pour terminer le mot et continuer.
-    function handleWordBlock(e) {
-      if (!e.inputType || !e.inputType.startsWith("insert")) return;
-      const data = e.data;
-      if (!data || data === " " || data === "\n") return;
-
-      const textarea = e.target;
-      const cursorPos = textarea.selectionStart;
-      const value = textarea.value;
-      let wordStart = cursorPos;
-      while (wordStart > 0 && value[wordStart - 1] !== " " && value[wordStart - 1] !== "\n") wordStart--;
-      const currentWord = value.substring(wordStart, cursorPos) + data;
-
-      if (isWordOverflow(currentWord, textarea)) {
-        e.preventDefault();
-        const warningZone = document.getElementById("limit-warning-zone");
-        const warningText = document.getElementById("limit-warning-text");
-        if (warningZone && warningText) {
-          warningText.textContent = "⚠️\nPlease, it is Impossible to Provide a World to Exceed a Single Line";
-          warningZone.classList.add("visible");
-        }
-      }
-    }
+    let previousValue = "";
 
     // Gestion de la saisie + mise à jour des compteurs et numéros de lignes
     function handleInput() {
@@ -535,17 +525,33 @@
       const lineNumbersDiv = document.getElementById("line-numbers");
       if (!textarea || !counter || !warningZone || !warningText || !lineNumbersDiv) return;
 
+      let justBlocked = false;
+
+      // 0. Si l'ajout de caractères vient de faire dépasser un mot de la largeur de la ligne,
+      // on annule cet ajout (comme le fait nativement la limite de 292 caractères).
+      if (textarea.value.length > previousValue.length) {
+        const { wordTooLong: overflowedNow } = computeWrappedLines(textarea);
+        if (overflowedNow) {
+          const cursorPos = textarea.selectionStart;
+          const addedChars = textarea.value.length - previousValue.length;
+          const revertCursor = Math.max(0, cursorPos - addedChars);
+          textarea.value = previousValue;
+          textarea.setSelectionRange(revertCursor, revertCursor);
+          justBlocked = true;
+        }
+      }
+
       // 1. Compteur de caractères
       const currentLength = textarea.value.length;
       counter.textContent = `${currentLength} / 292`;
 
       // 2. Génération automatique des numéros de lignes (compte aussi les retours à la ligne visuels)
-      let wordTooLong = false;
+      let wordTooLong = justBlocked;
       if (textarea.value === '') {
         lineNumbersDiv.textContent = '';
       } else {
         const { totalRows, wordTooLong: tooLong } = computeWrappedLines(textarea);
-        wordTooLong = tooLong;
+        wordTooLong = wordTooLong || tooLong;
         let numberString = '';
         for (let i = 1; i <= totalRows; i++) {
           numberString += i + '\n';
@@ -556,24 +562,27 @@
       // 3. Alertes
       if (currentLength >= 292) {
         counter.classList.add("limit-reached");
-        warningText.textContent = "⚠️\nPlease, it is Impossible to Provide More than 292 Characters";
+        warningText.textContent = "⚠️\nPlease,\nIt is Impossible to Provide More than 292 Characters";
         warningZone.classList.add("visible");
       } else if (wordTooLong) {
         counter.classList.remove("limit-reached");
-        warningText.textContent = "⚠️\nPlease, it is Impossible to Provide a World to Exceed a Single Line";
+        warningText.textContent = "⚠️\nPlease,\nIt is Impossible to Provide a Word that Exceeds a Single Line";
         warningZone.classList.add("visible");
       } else {
         counter.classList.remove("limit-reached");
         warningZone.classList.remove("visible");
       }
+
+      // 4. Auto-agrandissement du textarea : évite toute barre de défilement interne
+      // (qui réduisait la largeur visible au fil de la saisie).
+      textarea.style.height = "auto";
+      textarea.style.height = textarea.scrollHeight + "px";
+      lineNumbersDiv.style.height = textarea.style.height;
+
+      previousValue = textarea.value;
     }
 
     window.addEventListener("resize", handleInput);
-
-    const textInputEl = document.getElementById("text-input");
-    if (textInputEl) {
-      textInputEl.addEventListener("beforeinput", handleWordBlock);
-    }
 
     function selectLang(emoji) {
       if (selectedLang === emoji) {
@@ -601,10 +610,11 @@
       const isMobile = window.innerWidth <= 600;
       const limit = isMobile ? 40 : 70;
       const forceColumnClass = len > limit ? "force-column" : "";
+      const emojiSpan = emoji ? `<span class="emoji-prefix">${emoji}</span>` : "";
 
       return `
         <div class="${className} result-row ${forceColumnClass}">
-          <span class="emoji-prefix">${emoji}</span>
+          ${emojiSpan}
           <span class="text-content">${text}</span>
         </div>
       `;
@@ -615,6 +625,7 @@
       const formatRules = "DO NOT use markdown formatting like asterisks (**). Do not write introduction sentences. Answer EXACTLY using the format lines below.";
       const writingSystemInstruction = "CRITICAL: You MUST write the translation or text using the native script/alphabet and natural writing system of that language. Crucially, if the language is 'ⵜⴰⵎⴰⵣⵉⵖⵜ' (Tamazight/Amazigh), you MUST write exclusively using the native Tifinagh script. If the language is Arabic, use ONLY Arabic script characters.";
       const strictLangRule = `CRITICAL LANGUAGE DETECTION: Detect the language of the Text. If the language matches EXACTLY one of the names in this list, return that name on the LANG: line: [${SUPPORTED}]. If the language is NOT in this list (for example Latin, Esperanto, etc.), you MUST write EXACTLY 'LANG: UNKNOWN'. Do not guess a neighboring language.`;
+      const typoToleranceInstruction = "TYPO TOLERANCE: The Text may contain a spelling mistake or typo. First check if the Text, as written, is a real word in any world language. If not, search for the closest real word it could be (considering the languages in the list above, and any other known language). If you find a plausible correction, silently use that corrected word to detect the language and to produce the translation/result. Only write 'LANG: UNKNOWN' if no reasonably close real word can be found in any language.";
 
       if (mode === "translate" && targetLang) {
         prompt =
@@ -622,6 +633,7 @@
           `1. ${strictLangRule}\n` +
           `2. Translate the text to ${targetLang}.\n` +
           `3. Provide the exact phonetic transcription of that translation using the International Phonetic Alphabet (IPA).\n` +
+          `${typoToleranceInstruction}\n` +
           `${writingSystemInstruction}\n` +
           `${formatRules}\n\n` +
           `Reply in this exact format (3 lines only):\n` +
@@ -636,6 +648,7 @@
           `1. ${strictLangRule}\n` +
           `2. As a humorous Discord bot, reveal the hidden true meaning of this message based on Discord/gaming clichés. Reply ${langInstruction}, short and funny.\n` +
           `3. Crucial: You MUST provide the exact phonetic transcription of that hidden truth text using the International Phonetic Alphabet (IPA) on the third line.\n` +
+          `${typoToleranceInstruction}\n` +
           `${writingSystemInstruction}\n` +
           `${formatRules}\n\n` +
           `Reply in this exact format (3 lines only):\n` +
@@ -794,15 +807,15 @@
         if (backThought && !selectedLang) {
           const { sourceLang, result } = await callGemini(text, null, "truth", apiKey);
           if (!sourceLang) {
-            setOutput(`<p class="error-msg">⚠️\n  Language Not Registered</p>`, true);
+            setOutput(`<p class="error-msg">⚠️\nLanguage Not Registered</p>`, true);
             return;
           }
-          setOutput(`<p class="result-main">${result}</p>`);
+          setOutput(`<p class="result-main">${result}</p><p class="result-caption">Revealed</p>`);
         }
         else if (!backThought && selectedLang) {
           const { sourceLang, result, ipa } = await callGemini(text, targetLang, "translate", apiKey);
           if (!sourceLang) {
-            setOutput(`<p class="error-msg">⚠️\n  Language Not Registered</p>`, true);
+            setOutput(`<p class="error-msg">⚠️\nLanguage Not Registered</p>`, true);
             return;
           }
           
@@ -814,13 +827,14 @@
             if (ipa && ipa.toUpperCase() !== "N/A" && ipa.trim() !== "") {
               htmlResult += createRowHTML("result-ipa", "🌐", ipa);
             }
+            htmlResult += `<p class="result-caption">${selectedLang} Translated in ${targetLang}</p>`;
             setOutput(htmlResult);
           }
         }
         else if (backThought && selectedLang) {
           const { sourceLang, result: truthText, ipa = "" } = await callGemini(text, targetLang, "truth", apiKey);
           if (!sourceLang) {
-            setOutput(`<p class="error-msg">⚠️\n  Language Not Registered</p>`, true);
+            setOutput(`<p class="error-msg">⚠️\nLanguage Not Registered</p>`, true);
             return;
           }
           
@@ -832,16 +846,17 @@
             if (ipa && ipa.toUpperCase() !== "N/A" && ipa.trim() !== "") {
               htmlResult += createRowHTML("result-ipa", "🌐", ipa);
             }
+            htmlResult += `<p class="result-caption">${selectedLang} Revealed and Translated in ${targetLang}</p>`;
             setOutput(htmlResult);
           }
         }
       } catch (e) {
         if (e.message === "QUOTA_ERROR") {
-          setOutput(`<p class="error-msg">⚠️\nPlease, \nYour Plan Limit has been Reached</p>`, true);
+          setOutput(`<p class="error-msg">⚠️\nPlease,\nYour Plan Limit has been Reached</p>`, true);
         } else if (e.message === "API_KEY_ERROR") {
-          setOutput(`<p class="error-msg">⚠️\nPlease, \nCheck your GEMINI API KEY</p>`, true);
+          setOutput(`<p class="error-msg">⚠️\nPlease,\nCheck your GEMINI API KEY</p>`, true);
         } else {
-          setOutput(`<p class="error-msg">⚠️\nPlease, \nTry Again</p>`, true);
+          setOutput(`<p class="error-msg">⚠️\nPlease,\nTry Again</p>`, true);
         }
       } finally {
         setButtonsState(false);
