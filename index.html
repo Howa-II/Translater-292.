@@ -573,11 +573,14 @@ It is Impossible to Provide More than 292 Characters</div>
         warningZone.classList.remove("visible");
       }
 
-      // 4. Auto-agrandissement du textarea : évite toute barre de défilement interne
-      // (qui réduisait la largeur visible au fil de la saisie).
+      // 4. Auto-agrandissement (et rétrécissement) du textarea : évite toute barre de défilement interne.
+      // On réinitialise D'ABORD les deux hauteurs à "auto" avant de mesurer,
+      // sinon la gouttière garde son ancienne hauteur et empêche le textarea de rétrécir.
       textarea.style.height = "auto";
-      textarea.style.height = textarea.scrollHeight + "px";
-      lineNumbersDiv.style.height = textarea.style.height;
+      lineNumbersDiv.style.height = "auto";
+      const newHeight = textarea.scrollHeight;
+      textarea.style.height = newHeight + "px";
+      lineNumbersDiv.style.height = newHeight + "px";
 
       previousValue = textarea.value;
     }
@@ -865,3 +868,4 @@ It is Impossible to Provide More than 292 Characters</div>
   </script>
 </body>
 </html>
+        
